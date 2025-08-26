@@ -1,0 +1,12 @@
+ID;Home_Owner;marital_Status;Job_Experience;Defaulted
+1;Yes;Single;3;No
+2;No;Married;4;No
+3;No;Single;5;No
+4;Yes;Married;4;No
+5;No;Divorced;2;Yes
+6;No;Married;4;No
+7;Yes;Divorced;2;No
+8;No;Married;3;Yes
+9;No;Married;3;No
+10;Yes;Single;2;Yes
+11;No;Married;3;NA

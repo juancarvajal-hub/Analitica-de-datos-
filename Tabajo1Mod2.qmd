@@ -1,0 +1,619 @@
+---
+title: ""
+format: 
+  pdf:
+    geometry: 
+      - top=2cm
+      - bottom=2cm
+      - left=2cm
+      - right=2cm
+editor: visual
+execute: 
+  comment: ""
+---
+
+```{=tex}
+\thispagestyle{empty}
+\begin{center}
+
+
+\includegraphics[width=12cm,height=5.5cm]{Logo_Unal.png}
+
+{\scshape\Huge Trabajo 1\par}
+\vfill
+{\LARGE Luis David Hernández Pérez\par}
+{\LARGE Daniel Felipe Villa Rengifo\par}
+{\LARGE Juan Gabriel Carvajal Negrete\par}
+{\LARGE Said Alejandro Duran\par}
+
+\vfill
+{\scshape\Large Introducción a  análitica \par}
+\vfill
+{\LARGE\LARGE Cesar Augusto Gomez Velez \par}
+\vfill
+{\bfseries\LARGE Universidad Nacional de Colombia \par}
+{\bfseries\LARGE Sede Medellín \par}
+{\scshape\Large Facultad de Ciencias \par}
+\vfill
+{\Large Medellín, Noviembre del 2023 \par}
+
+\end{center}
+```
+```{=tex}
+\newpage
+\pagestyle{plain}
+```
+```{=tex}
+\begin{center}
+\centering
+\LARGE
+\textbf{Tabajo 1: Modulo 2}
+\end{center}
+```
+```{=tex}
+\vspace{1cm}
+\begin{enumerate}
+ \item (50\%) En este ejercicio, se quiere predecir el numero de aplicaciones recibidas en distintos colegios universitarios americanos. utilizando las demás variables en el conjunto de datos \textcolor{blue}{College}.\\\\
+   \begin{enumerate}
+    \item Divida el conjunto de datos en un conjunto de entrenamiento y un conjunto de prueba.\\
+    \item Ajustar un modelo lineal usando mínimos cuadrados en el conjunto de entrenamiento, y informar el error de prueba obtenido.\\
+    \item Ajustar un modelo de regresión \textbf{ridge} en el conjunto de entrenamiento,escogiendo un valor de $\lambda$ mediante validación cruzada. Informe el error de prueba obtenido.\\
+    \item Ajuste un modelo \textbf{lasso} en el conjunto de entrenamiento, escogiendo el valor de $\lambda$ mediante validación cruzada. Informe el error de prueba obtenido, junto con el número de estimaciones de coeficientes distintos de cero.\\
+    \item Ajuste un modelo de PCR en el conjunto de entrenamiento, escogiendo M mediante validación cruzada. Informe el error de prueba obtenido, junto con el valor. de M que fue seleccionado.\\
+    \item Ajuste un modelo PLS en el conjunto de entrenamiento, con M escogido mediante validación cruzada. Informe el error de prueba obtenido, junto con el valor de M que se selecciono.\\
+    \item  Comente los resultados obtenidos.\\
+     \begin{itemize}
+     \item ¿Con que precisión se puede predecir la cantidad de solicitudes universitarias recibidas?.
+     \item ¿Cuanta diferencia hay entre los errores de prueba resultantes de estos cinco enfoques?
+     \end{itemize}
+   \end{enumerate}  
+\end{enumerate}
+```
+```{=tex}
+\newpage
+\newpage
+\pagestyle{plain}
+```
+```{=tex}
+\begin{center}
+\centering
+\LARGE
+\textbf{Solución}
+\end{center}
+```
+```{=tex}
+\subsection{Punto 1:}
+\subsubsection{a) División de la base de datos}
+```
+Para dividir la base de datos tomaremos el 70% de las observaciones para entrenamiento y el otro 30% para prueba.
+
+```{r}
+#| echo: false
+#| warning: false
+require(ggplot2)
+require(tidyverse)
+require(ISLR2)
+require(magrittr)
+require(psych)
+require(knitr)
+require(xtable)
+require(glmnet)
+require(pls)
+require(boot)
+require(splines)
+```
+
+```{r}
+set.seed(1003)
+datos <- ISLR2::College
+lenp <- floor(0.7*nrow(datos))
+filas_train <- sample(1:nrow(datos),lenp)
+datos_train <- datos[filas_train,]
+datos_test <- datos[-filas_train,]
+```
+
+```{r}
+#| echo: false
+#| output: false
+
+# Datos de entrenamiento
+headTail(datos_train[,c(1:3,16:18)],top = 4,bottom = 4) %>% xtable()
+headTail(datos_test[,c(1:3,16:18)],top = 4,bottom = 4) %>% xtable()
+
+```
+
+Se presenta los primeros y últimos registros con algunas de las variables de la base de datos de entrenamiento y de prueba, esto para intentar minimizar espacio en el documento.
+
+\textbf{Datos de entrenamiento}
+
+```{=tex}
+\begin{table}[ht]
+\centering
+\begin{tabular}{|c|c|c|c|c|c|c|}
+\hline
+\textbf{Universidad} & \textbf{Private} & \textbf{Apps} & \textbf{Accept} & \textbf{perc.alumni} & \textbf{Expend} & \textbf{Grad.Rate} \\
+\hline
+Geneva College & Yes & 668 & 534 & 26 & 6786 & 74 \\
+Central College & Yes & 1283 & 1113 & 29 & 8444 & 67 \\
+University of Louisville & No & 4777 & 3057 & 24 & 10207 & 31 \\
+Alaska Pacific University & Yes & 193 & 146 & 2 & 10922 & 15 \\
+... &  & ... & ... & ... & ... & ... \\
+Cedarville College & Yes & 1307 & 1090 & 34 & 6897 & 64 \\
+East Carolina University & No & 9274 & 6362 & 18 & 9002 & 58 \\
+Rowan College of New Jersey & No & 3820 & 1431 & 6 & 7252 & 51 \\
+Warren Wilson College & Yes & 440 & 311 & 20 & 9430 & 63 \\
+\hline
+\end{tabular}
+\end{table}
+```
+\textbf{Datos de prueba}
+
+```{=tex}
+\begin{table}[ht]
+\centering
+\begin{tabular}{|c|c|c|c|c|c|c|}
+\hline
+\textbf{Universidad} & \textbf{Private} & \textbf{Apps} & \textbf{Accept} & \textbf{perc.alumni} & \textbf{Expend} & \textbf{Grad.Rate} \\
+\hline
+\centering Abilene Christian University & Yes & 1660 & 1232 & 12 & 7041 & 60 \\
+\centering Albion College & Yes & 1899 & 1720 & 37 & 11487 & 73 \\
+\centering Allegheny College & Yes & 2652 & 1900 & 41 & 11711 & 76 \\
+\centering Alma College & Yes & 1267 & 1080 & 32 & 9305 & 68 \\
+... &  & ... & ... & ... & ... & ... \\
+\centering Willamette University & Yes & 1658 & 1327 & 37 & 10779 & 68 \\
+\centering Winthrop University & No & 2320 & 1805 & 26 & 6729 & 59 \\
+\centering Worcester State College & No & 2197 & 1515 & 14 & 4469 & 40 \\
+\centering Yale University & Yes & 10705 & 2453 & 49 & 40386 & 99 \\
+\hline
+\end{tabular}
+\end{table}
+```
+```{=tex}
+\newpage
+\subsubsection{b) Modelo con mínimos cuadrados.}
+```
+```{r}
+modelo1 <- lm(Apps~.,data = datos_train)
+# Coeficientes del modelo
+modelo1$coefficients
+# Error de prueba
+predicciones <- predict(modelo1,datos_test)
+MSE1 <- mean((datos_test$Apps-predicciones)^2)
+```
+
+El error de prediccion es de $`r MSE1`$
+
+\subsubsection{c) Modelo de regresión ridge.}
+
+Para ajustar un modelo de regresión ridge primero encontremos el $\lambda$ que minimice el error cuadrático medio de la regresión, para esto vamos a usar la función \textcolor{blue}{cv.glmnet}, esta función realiza una validación cruzada de 10-folds internamente.A continuación se muestra la gráfica para diferentes valores del $\lambda$ y su efecto en el error del modelo.
+
+```{r}
+#| fig-align: center
+#| fig-height: 3.2
+x <- model.matrix(Apps~.,datos_train)[,-1]
+y <- datos_train$Apps
+xtest <- model.matrix(Apps~.,datos_test)[,-1]
+# Grafica con diferentes valores de lambda 
+set.seed(734)
+cv.out <- cv.glmnet(x,y,alpha=0)
+# lambda optimo
+optilamb <- cv.out$lambda.min
+plot(cv.out)
+```
+
+El valor de $\lambda$ que hace que el modelo resulte con el menor error es $`r optilamb`$. Ahora ajustemos la regresión ridge con este $\lambda$.
+
+```{r}
+# Modelo ridge
+mod.ridge<- glmnet(x, y, alpha = 0, lambda = optilamb)
+redge.predi <- predict(mod.ridge,s=optilamb,newx = xtest)
+# MSE de ridge
+MSEr <- mean((redge.predi-datos_test$Apps)^2)
+```
+
+Con un $\lambda$ encontrado por medio de validación cruzada, ajustando un modelo con los datos de entrenamiento y finalmente evaluando dicho modelo con los datos de prueba se obtuvo un error de test de `r floor(MSEr)`
+
+\subsubsection{d) Modelo de regresión lasso.}
+
+Para ajustar el modelo de regresión lasso se procede igual que en la regresión ridge pero, teniendo en cuenta el parámetro \textcolor{yellow}{alpha}. Realicemos validación cruzada para determinar el $\lambda$ que minimice el error.
+
+```{r}
+#| fig-height: 3.3
+set.seed(189)
+cv.out1 <- cv.glmnet(x,y,alpha=1)
+optilamb.l <- cv.out1$lambda.min
+plot(cv.out1)
+```
+
+Por medio de la validación cruzada se determino que el \lambda que minimiza el error del modelo es `r optilamb.l`. Ahora ajustemos el modelo lasso y determinemos el error de prueba.
+
+```{r}
+# Modelo lasso
+mod.lasso<- glmnet(x, y, alpha = 1, lambda = optilamb.l)
+lasso.predi <- predict(mod.lasso,s=optilamb.l,newx = xtest)
+# error de prueba
+MSEl <- mean((lasso.predi-datos_test$Apps)^2)
+
+```
+
+Con un $\lambda$ encontrado por medio de validación cruzada, ajustando un modelo con los datos de entrenamiento y finalmente evaluando dicho modelo con los datos de prueba se obtuvo un error de test de `r floor(MSEl)`
+
+\textbf{Coeficientes del modelo}
+
+```{r}
+lasso.coeff <- predict(mod.lasso , type = "coefficients",
+s = optilamb.l)[1:18,]
+lasso.coeff
+```
+
+Para este caso no se presentan coeficientes estimaos iguales a cero.
+
+\subsubsection{e) Modelo de regresión PCR.}
+
+Para ajustar la regresión PCR (Principal Components Analysis) vamos a utilizar la función \textcolor{blue}{pcr()} que trae incorporada el parámetro \textcolor{yellow}{validation} el cual realiza validación cruzada 10-fold para determinar M (el numero de componentes ) que minimizan el error del ajuste del modelo.
+
+```{r}
+#| fig-height: 3.3
+# error por cada numero de componentes posibles
+pcr.model <- pcr(Apps~.,data=datos_train,scale=TRUE,validation="CV")
+validationplot(pcr.model,val.type = "MSEP")
+```
+
+De la gráfica tenemos que con M = p se obtiene el menor MSE pero seria igual a ajustar un modelo con la función \textcolor{blue}{lm()}, por esto un M adecuado es M=5 ya que a partir de ahí el MSE del modelo no varia en gran cantidad y también estaríamos evitando el sobre ajuste. Con este numero de componentes encontremos el error de prueba.
+
+```{r}
+# Error de prueba 
+pcr.pred <- predict(pcr.model , datos_test, ncomp = 5)
+MSEpcr <- mean((pcr.pred - datos_test$Apps)^2)
+```
+
+El modelo PCR presenta un error de prueba de `r MSEpcr`
+
+\subsubsection{f) Modelo de regresión PLS.}
+
+Para ajustar el modelo PLS (mínimos cuadrados parciales) se utiliza la función \textcolor{blue}{plsr()} que también hace internamente una validación de 10-fold para determinar el numero M (de direcciones ) que obtenga el error mas bajo del modelo.
+
+```{r}
+#| fig-height: 3.3
+set.seed (34)
+pls.model <- plsr(Apps ~ ., data = datos_train,
+scale = TRUE , validation = "CV")
+validationplot(pls.model , val.type = "MSEP")
+```
+
+De igual forma como lo observamos en la regresión PCR el numero de M optimo es 5, ya que de ahí en adelante no cambia significativamente el error con mas componentes. Ajustemos el modelo.
+
+```{r}
+pls.pred <- predict(pls.model,datos_test,ncomp = 5)
+MSEpls <- mean((pls.pred - datos_test$Apps)^2)
+```
+
+El modelo de PLS presenta un error de `r MSEpls`
+
+\subsubsection{g) Resultados}
+
+```{r}
+#| echo: false
+#| output: false
+#| execute: never
+resumen <- matrix(c(MSE1,MSEr,MSEl,MSEpcr,MSEpls),nrow = 5)
+rownames(resumen) <- c("Modelo con mínimos cuadrados","Modelo de regresión ridge","Modelo de regresión lasso","Modelo de regresión PCR","Modelo de regresión PLS")
+colnames(resumen) <- c("Error de prueba")
+resumen %>% xtable()
+```
+
+```{=tex}
+\begin{table}[ht]
+\centering
+\renewcommand{\arraystretch}{0.9}  % Aumenta el espaciado entre filas
+\begin{tabular}{|c|c|}
+\hline
+\textbf{Modelo} & \textbf{Error de prueba} \\ 
+\hline
+Modelo con mínimos cuadrados & 1,145,861.24 \\ 
+Modelo de regresión ridge & 1,109,606.14 \\ 
+Modelo de regresión lasso & 1,144,628.00 \\ 
+Modelo de regresión PCR & 1,765,022.18 \\ 
+Modelo de regresión PLS & 1,209,912.69 \\ 
+\hline
+\end{tabular}
+\end{table}
+```
+\vspace{0.3cm}
+
+Comparando los errores de predicción de todos los modelos, notamos que los dos modelos que presentan el mayor error de prueba son el modelo de regresión PCR y el modelo de regresión PLS. Por otro lado, el error de prueba de los modelos de regresión por mínimos cuadrados y lasso es muy similar. Si tuviéramos que elegir un modelo basándonos en el error de prueba, optaríamos por el modelo de regresión ridge, ya que con un error de prueba de 1,109,606 es el más pequeño entre todos los modelos.
+
+Aunque el modelo de regresión ridge fue el que presento un mejor error de prueba dado que este es relativamente grande en comparación con la amplitud de los valores de la variable respuesta.En este caso la precisión del modelo es limitada y el MSE sugiere que las predicciones del modelo tienen un error promedio significativo en comparación con los valores reales.
+
+```{=tex}
+\vspace{1cm}
+\begin{enumerate}
+ \item[2.] (50\%) Esta pregunta utiliza las variables \textcolor{blue}{dis} (la media ponderada de distancias a cinco centros de empleo de Boston) y \textcolor{blue}{nox} (concentracion de óxidos de nitrogeno en partes por 10 millones) del conjunto de datos \textcolor{blue}{Boston}. Vamos atratar \textcolor{blue}{dis} como predictor y \textcolor{blue}{nox} como respuesta.\\\\
+   \begin{enumerate}
+    \item Use la función \textcolor{blue}{poly()} para ajustar una regresión polinomial cúbica  y con esta predecir la variable \textcolor{blue}{nox} usando \textcolor{blue}{dis}. Reporte el resultado de la regresión, luego grafique los datos resultantes y los ajustes polinómicos.\\
+    \item Grafique los ajustes polinómicos para un rango de polinomios de diferentes grados (digamos, de 1 a 10), y reporte la suma de cuadrados de los
+residuales asociada.\\
+    \item Realice una validacion cruzada o algun otro enfoque para seleccionar el optimo grado para el polinomio y explique sus resultados.\\
+    \item Use la función \textcolor{blue}{bs()} para ajustar una spline de regresion para predecir \textcolor{blue}{nox} usando dis. Reporte la salida para el ajuste usando cuatro grados de libertad. ¿Cómo ubicó los nodos?. Graique el ajuste resultante.\\
+    \item Ahora ajuste una spline de regresión para un rango de grados de libertad,y grafique los ajustes resultantes e informe el RSS resultante. Describa los resultados obtenidos.\\
+    \item Realice una validación cruzada o algún otro enfoque para seleccionar los mejores grados de libertad para una spline de regresión sobre estos datos. Describa sus resultados.\\
+   \end{enumerate}  
+\end{enumerate}
+```
+\newpage
+
+```{=tex}
+\begin{center}
+\centering
+\LARGE
+\textbf{Solución}
+\end{center}
+```
+```{=tex}
+\subsection{Punto 2:}
+\subsubsection{a) }
+```
+```{r}
+datos2 <- Boston
+```
+
+```{r}
+# Ajuste del modelo de regresión polinomial cubico
+#===================================================
+fit <- lm(nox ~ poly(dis, 3), data = datos2)
+summary(fit)
+```
+
+\newpage
+
+```{r}
+#| echo: false
+#| fig-align: center
+#| fig-cap: Gráfico del ajuste del polinomio cubico
+#| fig-height: 3.3
+datos2 %>% ggplot(aes(x = dis, y = nox)) +
+  geom_point(color = "gold", alpha = 0.3) + 
+  geom_smooth(method = "lm", formula = y ~ poly(x, 3), color = "#000080") +
+  labs(title = "Polinomio de grado 3: nox ~ dis") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+A partir del gráfico anterior, se evidencia que el ajuste de regresión polinómica de grado 3 logra representar de manera efectiva la tendencia de los datos.
+
+\subsubsection{b)}
+
+```{r}
+#| echo: false
+#| fig-align: center
+#| fig-cap: Gráfico de ajustes polinomicos de diferentes grados
+#| fig-height: 3
+#| fig-width: 7
+
+# Crea un dataframe vacío para almacenar los resultados
+results <- data.frame()
+
+# Itera a través de diferentes grados de polinomios (de 1 a 10)
+for (degree in 1:10) {
+  # Ajusta una regresión polinómica con el grado actual
+  model <- lm(nox ~ poly(dis, degree), data=datos2)
+  
+  # Crea un nuevo dataframe con valores de 'dis' para hacer predicciones
+  new_data <- data.frame(dis = seq(min(datos2$dis), max(datos2$dis), length.out = 100))
+  
+  # Realiza predicciones utilizando el modelo
+  predictions <- predict(model, newdata = new_data)
+  
+  # Almacena los resultados en 'results'
+  results <- rbind(results, data.frame(degree = degree, dis = new_data$dis, nox = predictions))
+}
+
+
+ggplot(results, aes(x = dis, y = nox, color = factor(degree))) +
+  geom_point(data = datos2, aes(x = dis, y = nox), alpha = 0.5) +
+  geom_line() +
+  labs(x = "dis", y = "nox", color = "Grados del Polinomio") +
+  ggtitle("Ajustes Polinómicos de Diferentes Grados") +
+  theme_minimal()
+```
+
+A partir del gráfico anterior, se puede apreciar que, con la excepción del polinomio de grado 1, los polinomios de grados superiores muestran una notable capacidad de ajuste a la tendencia de los datos. \newpage
+
+```{r}
+#| echo: false
+#| fig-align: center
+#| fig-cap: Gráfico de la suma de cuadrados residuales
+
+# Crear un dataframe para almacenar los resultados
+results <- data.frame(Degree = 1:10, SSR = numeric(10))
+
+# Realizar ajustes polinómicos para grados de 1 a 10 y calcular las sumas de cuadrados de los residuales
+for (degree in 1:10) {
+  model <- lm(nox ~ poly(dis, degree), data = datos2)
+  results$SSR[degree] <- sum(resid(model)^2)
+}
+
+
+ggplot(results, aes(x = Degree, y = SSR)) +
+  geom_point(color = "gold", size = 2) +
+  geom_line(color = "#000080") +
+  geom_text(aes(label = round(SSR, 2), vjust = -0.5), color = "black", size = 3) +
+  labs(title = "Suma de Cuadrados de Residuales por Grado de Polinomio",
+       x = "Grado del Polinomio",
+       y = "Suma de Cuadrados de Residuales") +
+  scale_x_continuous(breaks = 1:10) +
+  theme_minimal()
+```
+
+A partir del gráfico anterior apreciamos que a medida que aumenta el grado del polinomio, la suma de cuadrados residuales tiende a disminuir. Esto significa que a medida que se consideran polinomios de mayor grado, el modelo se ajusta mejor a los datos de entrenamiento, reduciendo la cantidad de error no explicado, lo que resulta en una mejor capacidad del modelo para explicar la variabilidad en los datos. Sin embargo, es importante tener cuidado al seleccionar un grado de polinomio alto, ya que un exceso de complejidad puede llevar a un sobreajuste del modelo, lo que significa que se adaptaría demasiado a los datos de entrenamiento y no generalizaría bien a nuevos datos. Por lo tanto, se necesita un equilibrio al elegir el grado óptimo del polinomio.
+
+\subsubsection{c)}
+
+```{r}
+#| echo: false
+#| fig-height: 3
+#| fig-align: center
+
+# Vector para almacenar el error de validación de cada polinomio
+cv.error <- rep(NA, 10)
+# Vector para almacenar el RSS de cada polinomio
+rss <- rep (NA, 10)
+for (i in 1:10){
+modelo.poli <- glm(nox ~ poly(dis, i), data = datos2)
+set.seed(123)
+cv.error[i] <- cv.glm(datos2, modelo.poli, K = 10)$delta[1]
+rss[i] <- sum(modelo.poli$residuals^2)
+}
+
+ggplot(data = data.frame(polinomio = 1:10, cv.error = cv.error), 
+       aes(x = polinomio, y = cv.error)) +
+geom_point(color = "orangered2") +
+geom_path() +
+scale_x_continuous(breaks = 0:10) +
+labs(title = "cv.MSE  ~ Grado de polinomio") +
+theme_minimal() +
+theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+```{r}
+# Polinomio con menor error de validación
+which.min(cv.error)
+```
+
+El análisis de la minimización del error de validación (MSE) indica que el polinomio de grado 4 es el que mejor se ajusta en este caso. No obstante, al considerar la tendencia en la evolución del error de validación en el gráfico, surge la preferencia por el ajuste con un polinomio de grado 3, ya que la diferencia entre este y el polinomio de grado 4 no se muestra significativa.
+
+\subsubsection{d)}
+
+Del literal anterior, consideramos ajustar un spline cubico, por tanto el ajuste de la regresión spline solo va a tener un nodo.
+
+```{r}
+modelo_splines <- lm(nox ~ bs(dis, df = 4, degree = 3), data = datos2)
+attr(bs(datos2$dis, df = 4, degree = 3), which = "knots")
+
+```
+
+```{r}
+#| echo: false
+#| fig-align: center
+
+datos2 %>% 
+  ggplot(aes(x = dis, y = nox)) +
+  geom_point(col = "gold") +
+  geom_smooth(method = "lm", formula = y ~ bs(x, degree = 3, df = 4), 
+            color = "#000080", se = TRUE, level = 0.95) +
+  labs(title = "Spline con df = 4: nox ~ dis") +
+  theme_minimal() + 
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+\newpage
+
+\subsubsection{e)}
+
+Se utilizo la función bs() para los ajustes del spline de regresión considerando un rango de 3 a 10 grados de libertad, el grado por defecto es 3 (cubic spline).
+
+```{r}
+#| echo: false
+#| fig-align: center
+
+# Rango de grados de libertad
+df_values <- 3:10
+
+# gráfico de dispersión de los datos
+scatter_plot <- ggplot(datos2, aes(dis, nox)) +
+  geom_point(color="gold") +
+  theme_minimal()+
+  labs(title = "Ajustes de Spline con Diferentes Grados de Libertad")
+
+# data frame para almacenar los resultados
+spline_data <- data.frame()
+
+for (df in df_values) {
+  spline_fit <- lm(nox ~ bs(dis, df = df), data = datos2)
+  spline_data <- rbind(spline_data, data.frame(dis = datos2$dis, nox = predict(spline_fit), df = factor(df)))
+}
+
+# Todos los ajustes de spline en un solo gráfico
+spline_plot <- scatter_plot +
+  geom_line(data = spline_data, aes(x = dis, y = nox, color = df)) +
+  labs(color = "Grados de Libertad")
+
+spline_plot
+```
+
+```{r}
+#| echo: false
+#| warning: false
+
+library(mgcv)
+
+# Datos
+data <- datos2
+
+# Rango de grados de libertad
+grados_de_libertad <- 3:10
+
+# Almacenar los resultados del RSS
+resultados <- data.frame(Grados_de_Libertad = grados_de_libertad, RSS = numeric(length(grados_de_libertad)))
+
+# Ajustar splines cúbicos con diferentes grados de libertad y calcular el RSS
+for (i in 1:length(grados_de_libertad)) {
+  modelo <- gam(nox ~ s(dis, k = grados_de_libertad[i]), data = data)
+  resultados$RSS[i] <- sum(modelo$residuals^2)
+}
+
+```
+
+```{r}
+#| echo: false
+
+ggplot(resultados, aes(x = factor(Grados_de_Libertad), y = RSS)) +
+  geom_line(group = 1, color = "#000080") +
+  geom_point(color="gold", size=2) +
+  geom_text(aes(label = round(RSS, 2), vjust = -0.5)) +
+  labs(title = "RSS en función de los Grados de Libertad",
+       x = "Grados de Libertad",
+       y = "RSS") +
+  theme_minimal() +
+  scale_x_discrete(labels = as.character(resultados$Grados_de_Libertad))
+```
+
+El gráfico muestra cómo el RSS disminuye a medida que aumenta el número de grados de libertad en la spline cúbica de regresión. Esto es típico en modelos más flexibles, ya que pueden adaptarse mejor a los datos, reduciendo la discrepancia entre los valores observados y los valores ajustados. Sin embargo, es importante encontrar un equilibrio, ya que demasiados grados de libertad pueden llevar a un sobreajuste del modelo. La elección del número óptimo de grados de libertad depende de consideraciones estadísticas y prácticas.
+
+\subsubsection{f)}
+
+Emplearemos el método de 10-fold cross validation para encontrar el valor óptimo de grados de libertad, probando valores de entre 3 y 10. Puesto que el valor óptimo de polinomio escogido fue de 3, será necesario especificar el argumento degree, ya que el spline se ajusta automáticamente con un grado de polinomio 3.
+
+```{r}
+#| warning: false
+# Vector donde se almacenarán los errores de validación
+cv.error1 <- rep(NA, 10)
+# K-fold cross validation para cada valor de df
+for(i in 2:10){
+modelo.spline1 <- glm(nox ~ bs(dis, degree = 3, df = i), 
+                     data = datos2)
+set.seed(123)
+cv.error1[i] = cv.glm(datos2, modelo.spline1, K = 10)$delta[1]
+}
+
+```
+
+```{r}
+#| echo: false
+ggplot(data = data.frame(grados_libertad = 2:10, cv.error1 = cv.error1[-1]), 
+       aes(x = grados_libertad, y = cv.error1)) +
+geom_point(color = "orangered2") +
+geom_path() +
+scale_x_continuous(breaks=3:10) +
+labs(title = "cv.MSE  ~ Grados de libertad") +
+theme_minimal() +
+theme(plot.title = element_text(hjust = 0.5))
+```
+
+```{r}
+which.min(cv.error1)
+```
+
+En este caso, se han identificado 6 grados de libertad como la elección óptima para minimizar el error de validación. Esta elección se traduce en la utilización de 3 knots, dado que el modelo de spline seleccionado es cúbico.

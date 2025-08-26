@@ -1,0 +1,307 @@
+---
+title: ""
+lang: es
+format: 
+  pdf:
+    execute:
+      echo: false
+      warning: false
+      fig_align: "center"
+      comment: ""
+    geometry:
+    - margin=1in  
+    fontsize: 11pt 
+---
+
+```{r}
+require(magrittr)
+require(ggplot2)
+require(gamlss)
+require(xtable)
+require(stats)
+```
+
+```{=tex}
+\pagestyle{empty}
+
+\begin{center}
+
+\textup{\LARGE \textbf
+\vfill Parcial 2: Modelos Lineales \\ 
+Daniel Felipe Villa \\
+Mauricio Mazo Lopera\\
+2023-02
+\vfill}
+
+\end{center}
+```
+\newpage
+
+```{=tex}
+\begin{center}
+\LARGE
+\textbf{Solución}
+\end{center}
+```
+```{r}
+#| echo: false
+Y <- c(10,13,2,0,9,4,2,2,10,9,0,9,6,6,7,5,
+         0,0,1,8,11,0,2,7,6,8,8,8,6,6,3,5,
+         6,5,0,0,2,0,11,6,5,6,0,0,0,2,0,0)
+  
+X1 <- c(32,18,53,37,19,44,17,65,23,27,62,26,36,28,34,28,
+         59,53,27,32,20,54,40,22,23,39,27,24,22,25,34,25,
+         33,21,45,43,51,48,23,57,29,38,44,33,56,58,58,37)
+  
+X2 <- c(8,0,15,16,0,20,0,25,3,7,40,2,8,8,12,9,
+         40,29,8,10,0,13,10,2,3,10,5,3,4,5,13,5,
+         13,1,23,20,13,25,0,10,8,3,20,10,25,28,28,10)
+  
+X3 <- c(90,75,148,178,103,100,130,123,110,120,180,136,102,139,153,118,
+         181,194,118,139,72,185,184,131,106,82,143,144,152,118,193,170,
+         193,174,284,125,116,222,119,86,213,156,231,241,231,134,165,229)
+  
+X4 <- c(1,1,0,0,0,0,1,1,1,1,1,1,0,1,1,1,
+       0,1,1,1,1,0,1,1,0,1,1,1,1,1,1,0,
+       1,1,0,1,0,1,1,1,1,1,1,0,1,1,1,1)
+  
+X5 <- c(1,0,0,1,1,0,1,0,1,1,1,1,0,0,1,0,
+    1,1,0,1,0,0,0,0,0,0,1,1,0,0,1,1,
+    1,0,1,0,0,1,1,0,1,0,1,1,1,1,1,1)
+
+df <- data.frame(Y, X1, X2, X3, X4, X5)
+```
+
+\section{Punto 1:}
+
+\textbf{Descripcion de las variables}
+
+-   $Y$: Días que en el ultimo año han faltado
+-   $X_1$: edad (años)
+-   $X_2$: antigüedad en la empresa (años)
+-   $X_3$: salario mensual (euros)
+-   $X_4$: área de trabajo: trabaja en fabricación = 1, trabaja en oficinas = 0
+-   $X_5$: genero empleado: hombre = 1, mujer = 0
+
+```{r}
+#| echo: false
+#| eval: false
+df %>% head(10) %>% xtable(align = "ccccccc",digits = 0, caption = "Encabezado de los datos")
+```
+
+```{=tex}
+\vspace{0.5cm}
+```
+
+```{=tex}
+\begin{table}[ht]
+\centering
+\begin{tabular}{ccccccc}
+  \hline
+  Y & X1 & X2 & X3 & X4 & X5 \\ 
+  \hline
+  10 & 32 & 8 & 90 & 1 & 1 \\ 
+  13 & 18 & 0 & 75 & 1 & 0 \\ 
+  2 & 53 & 15 & 148 & 0 & 0 \\ 
+  0 & 37 & 16 & 178 & 0 & 1 \\ 
+  9 & 19 & 0 & 103 & 0 & 1 \\ 
+  4 & 44 & 20 & 100 & 0 & 0 \\ 
+  2 & 17 & 0 & 130 & 1 & 1 \\ 
+  2 & 65 & 25 & 123 & 1 & 0 \\ 
+  10 & 23 & 3 & 110 & 1 & 1 \\ 
+  9 & 27 & 7 & 120 & 1 & 1 \\ 
+   \hline
+\end{tabular}
+\caption{Encabezado de los datos} 
+\end{table}
+```
+
+\subsection{a).}
+
+Estime la ecuación de regresión e interprete los parámetros asociados a las variables $X_1$, $X_2$ y $X_3$, respectivamente.
+
+```{r}
+#| echo: false
+#| output: false
+#| warning: false
+df$X4 %<>% as.factor()
+df$X5 %<>% as.factor()
+```
+
+```{r}
+#| warning: false
+#| output: false
+#| echo: true
+poisson.model <- stats::glm(Y ~ X1 + X2 + X3 + X4 + X5, data = df,
+              family = "poisson")
+```
+
+```{r}
+#| echo: false
+poisson.model$coefficients
+```
+
+Revisando los coeficientes del modelo obtenemos que la ecuación de regresión estimada es:
+
+$$
+\hat{\lambda} = e^{2.972081+0.003435X_1-0.070546X_2-0.010568X_3+0.349094X_{41} + 0.326105X_{51}}
+$$
+\newpage
+**Interpretación de los parámetros:**
+
+-   $X_1$ : Por un aumento de una unidad en años da como resultado un aumento en 1.003441 veces la intersección. Otra forma de decir esto es que por cada aumento de unidad en años el numero de días faltantes de los empleados para el ultimo año aumenta en un $1\%$ asumiendo todas la demás variables son constantes.
+
+-   $X_2$ : Por cada aumento de unidad en la antigüedad en años, el numero de días faltantes de los empleados para el ultimo año disminuirá en un $93.19\%$ asumiendo todas la demás variables son constantes.
+
+-   $X_3$: Por cada aumento de unida en el salario en euros, el numero de días faltantes de los empleados para el ultimo año disminuirá en un $98.95\%$ asumiendo todas la demás variables son constantes.
+
+\subsection{b).}
+
+Contrastar la significancia individual de todas las variables explicativas. ¿Consideraría eliminar alguna de las variables? Si es así, ¿cuáles? ¿por qué?
+
+Para revisar las pruebas de hipótesis de la significancia individuales de las variables explicativas consideraremos realizar las el resumen del modelo.
+
+```{r}
+poisson.model %>% summary()
+```
+
+Si nos basamos por la significancia individual de las variables se podría considerar quitar del modelo las variables $X_1$(edad en años) y $X_4$(Área de trabajo), ya que estas variables individualmente no son significativas para el modelo.
+
+\subsection{c). Incompleto}
+
+Contrastar la significancia global del modelo. Interprete.
+
+```{r}
+anova.result<-anova(poisson.model,test = "Chisq")
+```
+
+\subsection{d).}
+
+Determine e interprete el coeficiente de determinación.
+
+```{r}
+# Obtiene la Residual Deviance y el Null Deviance
+residual_deviance <- deviance(poisson.model)
+null_deviance <- deviance(update(poisson.model, . ~ 1))
+
+# Calcula el índice de dispersión de Pearson (Pseudo R^2)
+pseudo_r_squared <- 1 - (residual_deviance / null_deviance)
+```
+
+El coeficiente de terminación para un modelo poisson es el llamado indice de dispersión de pearson (también conocido como Pseudo $R^2$ de Pearson), el cual se define de la siguiente manera.
+
+$$
+R^2=1-\frac{\text{Residual deviance}}{\text{Null deviance}}
+$$
+
+Donde:
+
+-    Residual deviance : Es la desviación residual del modelo, que mide cuánto queda de variabilidad no explicada por el modelo.
+
+-    Null Deviance :  Es la desviación asociada al modelo nulo, que representa la variabilidad si no se incluyen las variables explicativas en el modelo.
+
+Para nuestro modelo poisson tenemos que el índice de dispersión de Pearson (pseudo $R^2$) es de $`r pseudo_r_squared`$ lo que indica que el modelo explica aproximadamente el 69.19\% de la variabilidad en los datos, en comparación con un modelo nulo sin variables explicativas.
+
+\subsection{e).}
+
+Si su conclusión en el literal (b) fue eliminar una o más variables explicativas, estime de nuevo la ecuación de regresión sin considerar esas variables. Como es el nuevo coeficiente de determinación ajustado comparado con el del numeral (d)? Explique.
+
+Ajustemos un modelo sin las variables que connsideramos quitar en el literal b.
+
+```{r}
+#| warning: false
+#| output: false
+#| echo: true
+poisson.model1 <- stats::glm(Y ~ X2 + X3 + X5, data = df,
+              family = "poisson")
+```
+
+Encontremos el coeficiente de determinación para comparar con el antes encontrado.
+
+```{r}
+# Obtiene la Residual Deviance y el Null Deviance
+residual_deviance1 <- deviance(poisson.model1)
+null_deviance1 <- deviance(update(poisson.model1, . ~ 1))
+
+# Calcula el índice de dispersión de Pearson (Pseudo R^2)
+pseudo_r_squared1 <- 1 - (residual_deviance1 / null_deviance1)
+```
+Al determinar el índice de dispersión de Pearson (pseudo $R^2$) de este ultimo modelo que es de $`r pseudo_r_squared1`$ y compararlo con el índice de dispersión de Pearson del modelo con todas las variables que es $`r pseudo_r_squared`$ notamos que no existe mucha diferencia entre estos valores, lo que puede indicar que las variables que fueron eliminadas del modelo no aportaban gran significancia a la hora de intentar explicar la variabilidad en los datos, en comparación con un modelo nulo sin variables explicativas.
+
+\newpage
+
+\subsection{f).}
+Analice posibles interacciones dos a dos entre las variables y de ser significativas, interprete los resultados.
+
+Ajustemos un modelo con interacciones dos a dos entre las variables regresoras.
+
+```{r}
+#| warning: false
+#| output: false
+#| echo: true
+poisson.model2 <- stats::glm(Y ~X1 +X2 + X3 + X4 + X5 +
+                              X1*X2+X3*X4 , data = df,
+              family = "poisson")
+```
+
+Veamos el resumen del modelo con interacciones dobles.
+
+```{r}
+poisson.model2 %>% summary()
+```
+Para este caso intentamos ajustar el modelo con interacciones dobles entre las variables $X_1$(edad en años) con $X_2$(Antigüedad en la empresa) y $X_3$(salario mensual) con $X_4$(área de trabajo), de estas interacciones la única que fue significativa fue la interacción de $X_1$ y $X_2$, lo cual  indica que la relación entre la edad y la cantidad de días de ausencia en el último año es diferente en empleados con más antigüedad en la empresa en comparación con aquellos con menos antigüedad. En este caso, a medida que los empleados envejecen y tienen más antigüedad, faltan menos o más días en comparación con empleados más jóvenes o con menos antigüedad.
+
+\newpage
+
+
+\subsection{g).}
+Realice un análisis de los residuales y si es necesario, proponga medidas remedíales (transformaciones).
+
+```{r}
+poisson.model3 <- stats::glm(Y ~X1 +X2 + X3 + X5 +
+                              X1*X2 , data = df,
+              family = "poisson")
+residuales <- poisson.model3$residuals
+predicciones <- predict(poisson.model3, type = "response")
+residuales_est <-residuales/mean((df$Y-predicciones)^2)
+
+```
+
+Para el análisis de residuales,utilizaremos los residuales estandarizados.
+
+```{r}
+#| fig-align: center
+#| fig-height: 4
+#| fig-width: 7
+par(mfrow=c(1,2))
+qqnorm(residuales_est,pch=19,cex=0.5)
+qqline(residuales_est)
+plot(poisson.model3$fitted.values,residuales_est)
+title("Residuals vs Fitted")
+abline(h = 0, lty = 2, lwd = 2, col = 2)
+```
+
+Para intentar lograr la normalidad y estabilizar la varianza realicemos una transformación a la variable respuesta juntos con las predictoras, dicha transformación será la raiz cuadrada ($\sqrt{}$).
+
+```{r}
+#| warning: false
+poisson.model3_tras <- stats::glm(sqrt(Y) ~ sqrt(X1) + sqrt(X2) + sqrt(X3) + X5 + sqrt(X1*X2) , data = df,family = "poisson")
+residuales1 <- poisson.model3$residuals
+predicciones1 <- predict(poisson.model3_tras, type = "response")
+residuales_est1 <-residuales1/mean((df$Y-predicciones1)^2)
+```
+
+```{r}
+#| fig-align: center
+#| fig-height: 3.0
+#| fig-width: 7
+par(mfrow=c(1,2))
+qqnorm(residuales_est1,pch=19,cex=0.5)
+qqline(residuales_est1)
+plot(poisson.model3_tras$fitted.values,residuales_est1)
+title("Residuals vs Fitted")
+abline(h = 0, lty = 2, lwd = 2, col = 2)
+```
+
+\newpage
+Aun aplicando transformaciones, en ocasiones, puede resultar difícil o incluso imposible lograr la normalidad y la homocedasticidad en los datos. En tales casos, es esencial considerar modelos estadísticos alternativos o técnicas robustas que se ajusten mejor a las particularidades de los datos, y ser consciente de las limitaciones inherentes en el modelado.
